@@ -168,12 +168,19 @@ If the patient seems to have answered everything, specifically ask: "Before we f
     const finalData = await finalResponse.json();
     const agentResponse = finalData.choices[0].message.content;
 
-    // Determine which agent type based on medical priority
+    // Determine which agent type based on medical priority and conversation context
     let agentType: "medical" | "empathy" | "report" = "empathy";
+    
+    // Use Medical agent when discussing clinical details
     if (medicalInsights.medicalPriority === "high" || medicalInsights.redFlags?.length > 0) {
       agentType = "medical";
-    } else if (empathyInsights.empathyLevel === "high") {
-      agentType = "empathy";
+    } else if (medicalInsights.medicalPriority === "medium" || medicalInsights.followUpNeeded?.length > 0) {
+      agentType = "medical"; // Show medical agent when gathering medical info
+    } else if (empathyInsights.emotionalState === "distressed" || empathyInsights.needsMoreSupport) {
+      agentType = "empathy"; // Use empathy for emotional support
+    } else {
+      // Default to medical for most clinical conversations
+      agentType = conversationHistory.length <= 2 ? "empathy" : "medical";
     }
 
     return new Response(
