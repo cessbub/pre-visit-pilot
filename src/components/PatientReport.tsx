@@ -27,7 +27,17 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     
     // Extract chief complaint from first few patient messages
     const chiefComplaint = patientMessages.slice(0, 3).map(m => m.content).join(". ");
-    const formattedChiefComplaint = chiefComplaint.charAt(0).toUpperCase() + chiefComplaint.slice(1);
+    
+    // Format with proper capitalization
+    const formattedChiefComplaint = chiefComplaint
+      // Capitalize first letter
+      .replace(/^./, str => str.toUpperCase())
+      // Capitalize after periods
+      .replace(/\.\s+./g, str => str.toUpperCase())
+      // Capitalize standalone "i"
+      .replace(/\bi\b/g, 'I')
+      // Capitalize "i'm" to "I'm"
+      .replace(/\bi'm\b/g, "I'm");
     
     // Extract symptom duration
     let duration = "Not yet recorded";
