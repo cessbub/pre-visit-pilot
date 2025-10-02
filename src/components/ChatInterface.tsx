@@ -6,7 +6,7 @@ import { Send, Bot, User, Brain, Heart, FileText, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -90,10 +90,6 @@ const demoConversation = [
   },
 ];
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-);
 
 const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[]) => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
