@@ -113,8 +113,9 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     
     // Look for trigger patterns
     const triggerPatterns = [
-      /(?:trigger|cause|caused by|when i|after|due to|from)\s+([^.,!?]+)/gi,
+      /(?:triggered? by|cause|caused by|when i|after|due to|from)\s+([^.,!?]+)/gi,
       /(?:worse|bad|start|begin)(?:s|ed)?\s+(?:when|after|with)\s+([^.,!?]+)/gi,
+      /(?:happens?|occurs?)\s+(?:when|after|with)\s+([^.,!?]+)/gi,
     ];
     
     for (const pattern of triggerPatterns) {
@@ -123,9 +124,13 @@ const PatientReport = ({ messages }: PatientReportProps) => {
         if (match[1] && match[1].trim().length > 2) {
           // Clean up common filler words
           let trigger = match[1].trim()
-            .replace(/^(is|was|are|were|the|a|an)\s+/i, '')
-            .replace(/\s+(is|was|are|were|the|a|an)$/i, '');
-          triggers.push(trigger);
+            .replace(/^(is|was|are|were|the|a|an|my|i)\s+/i, '')
+            .replace(/\s+(is|was|are|were|the|a|an)$/i, '')
+            .replace(/^(drink|eat|do)ing\s+/i, ''); // Remove -ing verb prefix
+          
+          if (trigger.length > 2 && !triggers.some(t => t.toLowerCase() === trigger.toLowerCase())) {
+            triggers.push(trigger);
+          }
         }
       }
     }
