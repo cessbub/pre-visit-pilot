@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Send, Bot, User, Brain, Heart, FileText, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@supabase/supabase-js";
 
 interface Message {
   id: string;
@@ -88,13 +90,20 @@ const demoConversation = [
   },
 ];
 
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+);
+
 const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[]) => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [demoIndex, setDemoIndex] = useState(0);
   const [isDemo, setIsDemo] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isDemo && demoIndex < demoConversation.length) {
@@ -133,7 +142,7 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
     }
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
 
     const newMessage: Message = {
@@ -151,9 +160,38 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
     setInputValue("");
     setIsDemo(false);
 
-    // Simulate agent response
+    // Call AI agent
     setIsTyping(true);
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke('multi-agent-chat', {
+        body: { messages: [...messages, newMessage] }
+      });
+
+      if (error) throw error;
+
+      const agentMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "agent",
+        content: data.content,
+        timestamp: new Date(),
+        agentType: data.agentType,
+      };
+      
+      setMessages((prev) => {
+        const updated = [...prev, agentMessage];
+        onUpdateReport(updated);
+        return updated;
+      });
+      setAiEnabled(true);
+    } catch (error) {
+      console.error("Error calling AI:", error);
+      toast({
+        title: "AI Error",
+        description: "Make sure Lovable Cloud is enabled and your OpenAI API key is configured.",
+        variant: "destructive",
+      });
+      
+      // Fallback response
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "agent",
@@ -166,8 +204,9 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
         onUpdateReport(updated);
         return updated;
       });
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -181,7 +220,9 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
           <h3 className="font-semibold">AI Health Assistant</h3>
           <p className="text-sm text-muted-foreground">Multi-Agent System Active</p>
         </div>
-        <Badge variant="secondary" className="ml-auto">Demo Mode</Badge>
+        <Badge variant="secondary" className="ml-auto">
+          {aiEnabled ? "AI Active" : "Demo Mode"}
+        </Badge>
       </div>
 
       {/* Messages */}
