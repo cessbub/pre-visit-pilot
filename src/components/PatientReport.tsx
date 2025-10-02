@@ -258,58 +258,113 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     try {
       const doc = new jsPDF();
       const reportData = generateReportData();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const leftMargin = 20;
+      const rightMargin = 20;
+      const maxWidth = pageWidth - leftMargin - rightMargin;
       let yPos = 20;
       
-      // Title
-      doc.setFontSize(18);
-      doc.text("Patient Pre-Visit Report", 20, yPos);
-      yPos += 10;
+      // Helper function to add text with wrapping
+      const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+        doc.setFontSize(fontSize);
+        if (isBold) doc.setFont("helvetica", "bold");
+        else doc.setFont("helvetica", "normal");
+        
+        const lines = doc.splitTextToSize(text, maxWidth);
+        
+        // Check if we need a new page
+        if (yPos + (lines.length * fontSize * 0.5) > pageHeight - 20) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.text(lines, leftMargin, yPos);
+        yPos += lines.length * fontSize * 0.5;
+      };
       
-      doc.setFontSize(10);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, yPos);
-      yPos += 15;
+      // Title
+      addText("Patient Pre-Visit Report", 18, true);
+      yPos += 5;
+      
+      addText(`Generated: ${new Date().toLocaleString()}`, 10);
+      yPos += 10;
       
       // Chief Complaint
-      doc.setFontSize(14);
-      doc.text("Chief Complaint", 20, yPos);
-      yPos += 7;
-      doc.setFontSize(11);
-      doc.text(reportData.chiefComplaint, 20, yPos);
-      yPos += 15;
-      
-      // Symptom Timeline
-      doc.setFontSize(14);
-      doc.text("Symptom Timeline", 20, yPos);
-      yPos += 7;
-      doc.setFontSize(11);
-      doc.text(`Duration: ${reportData.symptoms.duration}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Trigger: ${reportData.symptoms.trigger}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Relief: ${reportData.symptoms.relief}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Associated: ${reportData.symptoms.associated}`, 20, yPos);
-      yPos += 15;
-      
-      // Red Flags
-      doc.setFontSize(14);
-      doc.text("Red Flags & Urgent Concerns", 20, yPos);
-      yPos += 7;
-      doc.setFontSize(11);
-      reportData.redFlags.forEach(flag => {
-        doc.text(`• ${flag}`, 20, yPos);
-        yPos += 6;
-      });
+      addText("Chief Complaint", 14, true);
+      yPos += 2;
+      addText(reportData.chiefComplaint, 11);
       yPos += 10;
       
+      // Symptom Timeline
+      addText("Symptom Timeline & Characteristics", 14, true);
+      yPos += 2;
+      addText(`Duration: ${reportData.symptoms.duration}`, 11);
+      yPos += 5;
+      addText(`Trigger: ${reportData.symptoms.trigger}`, 11);
+      yPos += 5;
+      addText(`Characteristics: ${reportData.symptoms.relief}`, 11);
+      yPos += 5;
+      addText(`Associated Symptoms: ${reportData.symptoms.associated}`, 11);
+      yPos += 10;
+      
+      // Red Flags
+      if (reportData.redFlags.length > 0) {
+        addText("Red Flags & Urgent Concerns", 14, true);
+        yPos += 2;
+        reportData.redFlags.forEach(flag => {
+          addText(`• ${flag}`, 11);
+          yPos += 3;
+        });
+        yPos += 10;
+      }
+      
+      // Medical History
+      addText("Relevant Medical History", 14, true);
+      yPos += 2;
+      if (patientInfo.medicalHistory.length > 0) {
+        addText("Past Medical History:", 11, true);
+        yPos += 3;
+        patientInfo.medicalHistory.forEach(condition => {
+          addText(`• ${condition}`, 11);
+          yPos += 3;
+        });
+        yPos += 5;
+      }
+      if (patientInfo.familyHistory.length > 0) {
+        addText("Family History:", 11, true);
+        yPos += 3;
+        patientInfo.familyHistory.forEach(history => {
+          addText(`• ${history}`, 11);
+          yPos += 3;
+        });
+        yPos += 5;
+      }
+      if (patientInfo.medications.length > 0) {
+        addText("Current Medications:", 11, true);
+        yPos += 3;
+        patientInfo.medications.forEach(med => {
+          addText(`• ${med}`, 11);
+          yPos += 3;
+        });
+        yPos += 5;
+      }
+      if (patientInfo.allergies.length > 0) {
+        addText("Allergies:", 11, true);
+        yPos += 3;
+        patientInfo.allergies.forEach(allergy => {
+          addText(`• ${allergy}`, 11);
+          yPos += 3;
+        });
+        yPos += 10;
+      }
+      
       // Recommendations
-      doc.setFontSize(14);
-      doc.text("Suggested Focus Areas", 20, yPos);
-      yPos += 7;
-      doc.setFontSize(11);
+      addText("Suggested Focus Areas for Physician", 14, true);
+      yPos += 2;
       reportData.recommendations.forEach(rec => {
-        doc.text(`• ${rec}`, 20, yPos);
-        yPos += 6;
+        addText(`• ${rec}`, 11);
+        yPos += 3;
       });
       
       doc.save(`patient-report-${Date.now()}.pdf`);
