@@ -46,15 +46,56 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     const triggers: string[] = [];
     const characteristics: string[] = [];
     
-    if (conversationText.includes("stair") || conversationText.includes("walk") || conversationText.includes("exercise")) {
-      triggers.push("Physical activity");
+    // Look for trigger patterns
+    const triggerPatterns = [
+      /(?:trigger|cause|caused by|when i|after|due to|from)\s+([^.,!?]+)/gi,
+      /(?:worse|bad|start|begin)(?:s|ed)?\s+(?:when|after|with)\s+([^.,!?]+)/gi,
+    ];
+    
+    for (const pattern of triggerPatterns) {
+      const matches = conversationText.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1] && match[1].trim().length > 2) {
+          triggers.push(match[1].trim());
+        }
+      }
     }
-    if (conversationText.includes("rest")) {
-      characteristics.push("Relieved by rest");
+    
+    // Common activity triggers
+    if (conversationText.includes("stair") || conversationText.includes("climb")) {
+      triggers.push("climbing stairs");
     }
-    if (conversationText.includes("worse") || conversationText.includes("better")) {
-      const worseMatch = conversationText.match(/worse (when|with|after) ([^.]+)/i);
-      if (worseMatch) triggers.push(worseMatch[2]);
+    if (conversationText.includes("walk") && conversationText.includes("long")) {
+      triggers.push("prolonged walking");
+    }
+    if (conversationText.includes("exercise") || conversationText.includes("physical activity")) {
+      triggers.push("physical activity");
+    }
+    
+    // Look for characteristics and descriptions
+    const characteristicPatterns = [
+      /(?:feel|feeling|feels)\s+(?:like\s+)?([^.,!?]+)/gi,
+      /(?:sharp|dull|throbbing|stabbing|burning|aching|pressure|tight|squeezing|radiating|constant|intermittent)/gi,
+      /(?:on|in|at)\s+(?:the|my)\s+(right|left)\s+(side|temple|head|chest|arm|leg)/gi,
+      /(?:worse|better)\s+(?:when|with|after)\s+([^.,!?]+)/gi,
+    ];
+    
+    for (const pattern of characteristicPatterns) {
+      const matches = conversationText.matchAll(pattern);
+      for (const match of matches) {
+        const text = match[0].trim();
+        if (text.length > 2 && !characteristics.includes(text)) {
+          characteristics.push(text);
+        }
+      }
+    }
+    
+    // Common relief patterns
+    if (conversationText.includes("rest") && conversationText.includes("better")) {
+      characteristics.push("relieved by rest");
+    }
+    if (conversationText.includes("medication") && conversationText.includes("help")) {
+      characteristics.push("responsive to medication");
     }
     
     // Extract associated symptoms
@@ -122,8 +163,8 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       hasChiefComplaint: chiefComplaint.length > 0,
       duration,
       hasTimeline: duration !== "Not yet recorded",
-      triggers: triggers.length > 0 ? triggers.join(", ") : "Not specified",
-      characteristics: characteristics.join(", ") || "Being assessed",
+      triggers: triggers.length > 0 ? triggers.slice(0, 3).join(", ") : "Not specified",
+      characteristics: characteristics.length > 0 ? characteristics.slice(0, 5).join("; ") : "Being assessed",
       symptoms: symptoms.length > 0 ? symptoms.join(", ") : "Being gathered",
       medicalHistory: medicalHistory.length > 0 ? medicalHistory : [],
       familyHistory: familyHistory.length > 0 ? familyHistory : [],
