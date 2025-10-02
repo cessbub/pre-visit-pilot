@@ -19,15 +19,74 @@ interface PatientReportProps {
 
 const PatientReport = ({ messages }: PatientReportProps) => {
   const { toast } = useToast();
-  const hasChiefComplaint = messages.some((m) =>
-    m.content.toLowerCase().includes("chest") || 
-    m.content.toLowerCase().includes("tightness")
-  );
+  
+  const extractPatientInfo = () => {
+    const patientMessages = messages.filter(m => m.role === "patient");
+    const conversationText = patientMessages.map(m => m.content.toLowerCase()).join(" ");
+    
+    // Extract chief complaint from first few patient messages
+    const chiefComplaint = patientMessages.slice(0, 3).map(m => m.content).join(". ");
+    
+    // Extract symptom duration
+    let duration = "Not yet recorded";
+    const durationPatterns = [
+      /(\d+)\s*(week|month|day|year)s?/i,
+      /(yesterday|today|last week|last month)/i,
+      /(recently|lately)/i
+    ];
+    for (const pattern of durationPatterns) {
+      const match = conversationText.match(pattern);
+      if (match) {
+        duration = match[0];
+        break;
+      }
+    }
+    
+    // Extract triggers and characteristics
+    const triggers: string[] = [];
+    const characteristics: string[] = [];
+    
+    if (conversationText.includes("stair") || conversationText.includes("walk") || conversationText.includes("exercise")) {
+      triggers.push("Physical activity");
+    }
+    if (conversationText.includes("rest")) {
+      characteristics.push("Relieved by rest");
+    }
+    if (conversationText.includes("worse") || conversationText.includes("better")) {
+      const worseMatch = conversationText.match(/worse (when|with|after) ([^.]+)/i);
+      if (worseMatch) triggers.push(worseMatch[2]);
+    }
+    
+    // Extract associated symptoms
+    const symptoms: string[] = [];
+    const symptomKeywords = {
+      "breath": "Shortness of breath",
+      "dizzy": "Dizziness",
+      "nausea": "Nausea",
+      "sweat": "Sweating",
+      "pain": "Pain",
+      "tight": "Tightness",
+      "pressure": "Pressure"
+    };
+    
+    for (const [keyword, symptom] of Object.entries(symptomKeywords)) {
+      if (conversationText.includes(keyword)) {
+        symptoms.push(symptom);
+      }
+    }
+    
+    return {
+      chiefComplaint: chiefComplaint || "Not yet identified",
+      hasChiefComplaint: chiefComplaint.length > 0,
+      duration,
+      hasTimeline: duration !== "Not yet recorded",
+      triggers: triggers.length > 0 ? triggers.join(", ") : "Not specified",
+      characteristics: characteristics.join(", ") || "Being assessed",
+      symptoms: symptoms.length > 0 ? symptoms.join(", ") : "Being gathered"
+    };
+  };
 
-  const hasTimeline = messages.some((m) =>
-    m.content.toLowerCase().includes("week") ||
-    m.content.toLowerCase().includes("month")
-  );
+  const patientInfo = extractPatientInfo();
 
   const generateReportData = () => {
     const patientMessages = messages.filter(m => m.role === "patient");
@@ -35,12 +94,12 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     
     return {
       timestamp: new Date().toISOString(),
-      chiefComplaint: hasChiefComplaint ? "Chest tightness with exertion" : "Not yet identified",
+      chiefComplaint: patientInfo.chiefComplaint,
       symptoms: {
-        duration: hasTimeline ? "Approximately 2 weeks" : "Not yet recorded",
-        trigger: "Physical activity (stairs, exertion)",
-        relief: "Resolves with 1-2 minutes of rest",
-        associated: "Mild shortness of breath"
+        duration: patientInfo.duration,
+        trigger: patientInfo.triggers,
+        relief: patientInfo.characteristics,
+        associated: patientInfo.symptoms
       },
       conversation: {
         patientResponses: patientMessages.map(m => ({
@@ -53,15 +112,18 @@ const PatientReport = ({ messages }: PatientReportProps) => {
           type: m.agentType
         }))
       },
-      redFlags: [
-        "Exertional chest symptoms requiring cardiac evaluation"
-      ],
-      recommendations: [
-        "Perform cardiovascular examination",
-        "Order EKG and cardiac biomarkers",
-        "Assess cardiovascular risk factors",
-        "Consider stress test or cardiology referral"
-      ]
+      redFlags: patientInfo.symptoms.toLowerCase().includes("chest") || 
+                patientInfo.chiefComplaint.toLowerCase().includes("chest")
+        ? ["Chest symptoms require immediate evaluation"]
+        : [],
+      recommendations: patientInfo.hasTimeline
+        ? [
+            "Complete physical examination",
+            "Review relevant lab work and diagnostics",
+            "Assess risk factors based on presenting symptoms",
+            "Consider specialist referral if needed"
+          ]
+        : ["Continue gathering patient history"]
     };
   };
 
@@ -272,11 +334,11 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Chief Complaint"
               icon={AlertTriangle}
               color="text-destructive"
-              complete={hasChiefComplaint}
+              complete={patientInfo.hasChiefComplaint}
             >
-              {hasChiefComplaint ? (
+              {patientInfo.hasChiefComplaint ? (
                 <p className="text-sm leading-relaxed">
-                  Chest tightness with exertion
+                  {patientInfo.chiefComplaint}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground italic">
@@ -290,21 +352,21 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Symptom Timeline and Characteristics"
               icon={Clock}
               color="text-primary"
-              complete={hasTimeline}
+              complete={patientInfo.hasTimeline}
             >
-              {hasTimeline ? (
+              {patientInfo.hasTimeline ? (
                 <div className="space-y-2 text-sm">
                   <p>
-                    <span className="font-medium">Duration:</span> Approximately 2 weeks
+                    <span className="font-medium">Duration:</span> {patientInfo.duration}
                   </p>
                   <p>
-                    <span className="font-medium">Trigger:</span> Physical activity (stairs, exertion)
+                    <span className="font-medium">Trigger:</span> {patientInfo.triggers}
                   </p>
                   <p>
-                    <span className="font-medium">Relief:</span> Resolves with 1-2 minutes of rest
+                    <span className="font-medium">Characteristics:</span> {patientInfo.characteristics}
                   </p>
                   <p>
-                    <span className="font-medium">Associated Symptoms:</span> Mild shortness of breath
+                    <span className="font-medium">Associated Symptoms:</span> {patientInfo.symptoms}
                   </p>
                 </div>
               ) : (
@@ -319,26 +381,24 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Red Flags & Urgent Concerns"
               icon={AlertTriangle}
               color="text-destructive"
-              badge={<Badge variant="destructive">High Priority</Badge>}
-              complete={hasTimeline}
+              badge={patientInfo.hasTimeline && generateReportData().redFlags.length > 0 ? <Badge variant="destructive">High Priority</Badge> : undefined}
+              complete={patientInfo.hasTimeline}
             >
-              {hasTimeline ? (
+              {patientInfo.hasTimeline && generateReportData().redFlags.length > 0 ? (
                 <div className="space-y-2">
                   <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                     <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-medium text-destructive mb-1">
-                        Exertional Chest Symptoms
+                        Urgent Medical Attention Required
                       </p>
                       <p className="text-foreground/80">
-                        Chest tightness triggered by physical activity with associated dyspnea
-                        requires immediate cardiac evaluation.
+                        {generateReportData().redFlags.join(". ")}
                       </p>
                     </div>
                   </div>
                   <p className="text-sm">
-                    <span className="font-medium">Recommendation:</span> Cardiac workup, stress
-                    test consideration, risk factor assessment
+                    <span className="font-medium">Recommendation:</span> Immediate medical evaluation and appropriate diagnostic workup
                   </p>
                 </div>
               ) : (
@@ -365,26 +425,16 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Suggested Focus Areas for Physician"
               icon={CheckCircle2}
               color="text-[hsl(var(--success-green))]"
-              complete={hasTimeline}
+              complete={patientInfo.hasTimeline}
             >
-              {hasTimeline ? (
+              {patientInfo.hasTimeline ? (
                 <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))] mt-0.5 flex-shrink-0" />
-                    <span>Perform cardiovascular examination</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))] mt-0.5 flex-shrink-0" />
-                    <span>Order EKG and cardiac biomarkers</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))] mt-0.5 flex-shrink-0" />
-                    <span>Assess cardiovascular risk factors</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))] mt-0.5 flex-shrink-0" />
-                    <span>Consider stress test or cardiology referral</span>
-                  </li>
+                  {generateReportData().recommendations.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))] mt-0.5 flex-shrink-0" />
+                      <span>{rec}</span>
+                    </li>
+                  ))}
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground italic">
