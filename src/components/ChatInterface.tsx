@@ -92,45 +92,19 @@ const demoConversation = [
 
 
 const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[]) => void }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "initial",
+      role: "agent",
+      content: "Hello! I'm your AI health assistant. I'm here to help gather information before your appointment. How can I help you today?",
+      timestamp: new Date(),
+      agentType: "empathy",
+    }
+  ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [demoIndex, setDemoIndex] = useState(0);
-  const [isDemo, setIsDemo] = useState(true);
-  const [aiEnabled, setAiEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (isDemo && demoIndex < demoConversation.length) {
-      const delay = demoIndex === 0 ? 500 : 2000;
-      
-      const timer = setTimeout(() => {
-        const demoMsg = demoConversation[demoIndex];
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          role: demoMsg.role,
-          content: demoMsg.content,
-          timestamp: new Date(),
-          agentType: demoMsg.agentType,
-        };
-        
-        setMessages((prev) => {
-          const updated = [...prev, newMessage];
-          onUpdateReport(updated);
-          return updated;
-        });
-        setDemoIndex((prev) => prev + 1);
-        
-        if (demoMsg.role === "agent") {
-          setIsTyping(true);
-          setTimeout(() => setIsTyping(false), 1500);
-        }
-      }, delay);
-
-      return () => clearTimeout(timer);
-    }
-  }, [demoIndex, isDemo, onUpdateReport]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -154,7 +128,6 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
       return updated;
     });
     setInputValue("");
-    setIsDemo(false);
 
     // Call AI agent
     setIsTyping(true);
@@ -178,7 +151,6 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
         onUpdateReport(updated);
         return updated;
       });
-      setAiEnabled(true);
     } catch (error) {
       console.error("Error calling AI:", error);
       toast({
@@ -217,7 +189,7 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
           <p className="text-sm text-muted-foreground">Multi-Agent System Active</p>
         </div>
         <Badge variant="secondary" className="ml-auto">
-          {aiEnabled ? "AI Active" : "Demo Mode"}
+          AI Active
         </Badge>
       </div>
 
