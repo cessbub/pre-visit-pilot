@@ -97,11 +97,20 @@ Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed
 2. Gather comprehensive medical information through intelligent follow-ups
 3. Probe for clinically relevant details when symptoms are mentioned
 4. Maintain a supportive, professional tone similar to an experienced triage nurse
+5. Guide patients to provide complete information needed for the patient report
+
+IMPORTANT: Help patients complete their medical history by asking about:
+- Chief complaint and when symptoms started
+- Duration, frequency, and severity of symptoms
+- What makes symptoms better or worse
+- Any associated symptoms
+- Relevant medical and family history
+- Current medications and allergies
 
 Current medical insights: ${JSON.stringify(medicalInsights)}
 Current empathy guidance: ${JSON.stringify(empathyInsights)}
 
-Based on these insights, ask the next appropriate question. Be conversational, warm, and thorough.`;
+Based on these insights, ask the next appropriate question to help complete the patient report. Be conversational, warm, and thorough.`;
 
     const finalResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

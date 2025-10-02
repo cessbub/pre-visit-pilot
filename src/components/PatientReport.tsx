@@ -201,88 +201,6 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     }
   };
 
-  const handleExportEHR = () => {
-    try {
-      const reportData = generateReportData();
-      
-      // FHIR-inspired EHR format
-      const ehrData = {
-        resourceType: "Observation",
-        status: "preliminary",
-        category: [{
-          coding: [{
-            system: "http://terminology.hl7.org/CodeSystem/observation-category",
-            code: "vital-signs",
-            display: "Vital Signs"
-          }]
-        }],
-        effectiveDateTime: reportData.timestamp,
-        issued: reportData.timestamp,
-        subject: {
-          display: "Patient"
-        },
-        encounter: {
-          display: "Pre-Visit Interview"
-        },
-        component: [
-          {
-            code: {
-              text: "Chief Complaint"
-            },
-            valueString: reportData.chiefComplaint
-          },
-          {
-            code: {
-              text: "Symptom Duration"
-            },
-            valueString: reportData.symptoms.duration
-          },
-          {
-            code: {
-              text: "Symptom Trigger"
-            },
-            valueString: reportData.symptoms.trigger
-          },
-          {
-            code: {
-              text: "Red Flags"
-            },
-            valueString: reportData.redFlags.join("; ")
-          }
-        ],
-        note: [
-          {
-            text: `Recommendations: ${reportData.recommendations.join("; ")}`
-          }
-        ],
-        conversation: reportData.conversation
-      };
-      
-      const ehrJson = JSON.stringify(ehrData, null, 2);
-      const blob = new Blob([ehrJson], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `patient-ehr-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: "EHR Exported",
-        description: "Patient data exported in FHIR-compatible JSON format",
-      });
-    } catch (error) {
-      console.error("EHR export error:", error);
-      toast({
-        title: "Export Failed",
-        description: "Unable to generate EHR export",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <Card className="h-[600px] flex flex-col shadow-lg">
       {/* Header */}
@@ -304,16 +222,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
             disabled={messages.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
-            PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportEHR}
-            disabled={messages.length === 0}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            EHR
+            Download PDF
           </Button>
         </div>
       </div>
