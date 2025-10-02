@@ -27,6 +27,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     
     // Extract chief complaint from first few patient messages
     const chiefComplaint = patientMessages.slice(0, 3).map(m => m.content).join(". ");
+    const formattedChiefComplaint = chiefComplaint.charAt(0).toUpperCase() + chiefComplaint.slice(1);
     
     // Extract symptom duration
     let duration = "Not yet recorded";
@@ -57,7 +58,11 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       const matches = conversationText.matchAll(pattern);
       for (const match of matches) {
         if (match[1] && match[1].trim().length > 2) {
-          triggers.push(match[1].trim());
+          // Clean up common filler words
+          let trigger = match[1].trim()
+            .replace(/^(is|was|are|were|the|a|an)\s+/i, '')
+            .replace(/\s+(is|was|are|were|the|a|an)$/i, '');
+          triggers.push(trigger);
         }
       }
     }
@@ -182,7 +187,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     }
     
     return {
-      chiefComplaint: chiefComplaint || "Not yet identified",
+      chiefComplaint: formattedChiefComplaint || "Not yet identified",
       hasChiefComplaint: chiefComplaint.length > 0,
       duration,
       hasTimeline: duration !== "Not yet recorded",
