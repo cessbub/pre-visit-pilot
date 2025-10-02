@@ -2,6 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
 
 interface Message {
   id: string;
@@ -16,6 +18,7 @@ interface PatientReportProps {
 }
 
 const PatientReport = ({ messages }: PatientReportProps) => {
+  const { toast } = useToast();
   const hasChiefComplaint = messages.some((m) =>
     m.content.toLowerCase().includes("chest") || 
     m.content.toLowerCase().includes("tightness")
@@ -26,9 +29,196 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     m.content.toLowerCase().includes("month")
   );
 
-  const handleExport = (format: "pdf" | "ehr") => {
-    // Simulate export
-    console.log(`Exporting as ${format}`);
+  const generateReportData = () => {
+    const patientMessages = messages.filter(m => m.role === "patient");
+    const agentMessages = messages.filter(m => m.role === "agent");
+    
+    return {
+      timestamp: new Date().toISOString(),
+      chiefComplaint: hasChiefComplaint ? "Chest tightness with exertion" : "Not yet identified",
+      symptoms: {
+        duration: hasTimeline ? "Approximately 2 weeks" : "Not yet recorded",
+        trigger: "Physical activity (stairs, exertion)",
+        relief: "Resolves with 1-2 minutes of rest",
+        associated: "Mild shortness of breath"
+      },
+      conversation: {
+        patientResponses: patientMessages.map(m => ({
+          content: m.content,
+          timestamp: m.timestamp.toISOString()
+        })),
+        agentQuestions: agentMessages.map(m => ({
+          content: m.content,
+          timestamp: m.timestamp.toISOString(),
+          type: m.agentType
+        }))
+      },
+      redFlags: [
+        "Exertional chest symptoms requiring cardiac evaluation"
+      ],
+      recommendations: [
+        "Perform cardiovascular examination",
+        "Order EKG and cardiac biomarkers",
+        "Assess cardiovascular risk factors",
+        "Consider stress test or cardiology referral"
+      ]
+    };
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const reportData = generateReportData();
+      let yPos = 20;
+      
+      // Title
+      doc.setFontSize(18);
+      doc.text("Patient Pre-Visit Report", 20, yPos);
+      yPos += 10;
+      
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, yPos);
+      yPos += 15;
+      
+      // Chief Complaint
+      doc.setFontSize(14);
+      doc.text("Chief Complaint", 20, yPos);
+      yPos += 7;
+      doc.setFontSize(11);
+      doc.text(reportData.chiefComplaint, 20, yPos);
+      yPos += 15;
+      
+      // Symptom Timeline
+      doc.setFontSize(14);
+      doc.text("Symptom Timeline", 20, yPos);
+      yPos += 7;
+      doc.setFontSize(11);
+      doc.text(`Duration: ${reportData.symptoms.duration}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Trigger: ${reportData.symptoms.trigger}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Relief: ${reportData.symptoms.relief}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Associated: ${reportData.symptoms.associated}`, 20, yPos);
+      yPos += 15;
+      
+      // Red Flags
+      doc.setFontSize(14);
+      doc.text("Red Flags & Urgent Concerns", 20, yPos);
+      yPos += 7;
+      doc.setFontSize(11);
+      reportData.redFlags.forEach(flag => {
+        doc.text(`• ${flag}`, 20, yPos);
+        yPos += 6;
+      });
+      yPos += 10;
+      
+      // Recommendations
+      doc.setFontSize(14);
+      doc.text("Suggested Focus Areas", 20, yPos);
+      yPos += 7;
+      doc.setFontSize(11);
+      reportData.recommendations.forEach(rec => {
+        doc.text(`• ${rec}`, 20, yPos);
+        yPos += 6;
+      });
+      
+      doc.save(`patient-report-${Date.now()}.pdf`);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: "Patient report has been saved as PDF",
+      });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Unable to generate PDF report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportEHR = () => {
+    try {
+      const reportData = generateReportData();
+      
+      // FHIR-inspired EHR format
+      const ehrData = {
+        resourceType: "Observation",
+        status: "preliminary",
+        category: [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/observation-category",
+            code: "vital-signs",
+            display: "Vital Signs"
+          }]
+        }],
+        effectiveDateTime: reportData.timestamp,
+        issued: reportData.timestamp,
+        subject: {
+          display: "Patient"
+        },
+        encounter: {
+          display: "Pre-Visit Interview"
+        },
+        component: [
+          {
+            code: {
+              text: "Chief Complaint"
+            },
+            valueString: reportData.chiefComplaint
+          },
+          {
+            code: {
+              text: "Symptom Duration"
+            },
+            valueString: reportData.symptoms.duration
+          },
+          {
+            code: {
+              text: "Symptom Trigger"
+            },
+            valueString: reportData.symptoms.trigger
+          },
+          {
+            code: {
+              text: "Red Flags"
+            },
+            valueString: reportData.redFlags.join("; ")
+          }
+        ],
+        note: [
+          {
+            text: `Recommendations: ${reportData.recommendations.join("; ")}`
+          }
+        ],
+        conversation: reportData.conversation
+      };
+      
+      const ehrJson = JSON.stringify(ehrData, null, 2);
+      const blob = new Blob([ehrJson], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `patient-ehr-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "EHR Exported",
+        description: "Patient data exported in FHIR-compatible JSON format",
+      });
+    } catch (error) {
+      console.error("EHR export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Unable to generate EHR export",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -48,7 +238,8 @@ const PatientReport = ({ messages }: PatientReportProps) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleExport("pdf")}
+            onClick={handleExportPDF}
+            disabled={messages.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             PDF
@@ -56,7 +247,8 @@ const PatientReport = ({ messages }: PatientReportProps) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleExport("ehr")}
+            onClick={handleExportEHR}
+            disabled={messages.length === 0}
           >
             <Download className="w-4 h-4 mr-2" />
             EHR
