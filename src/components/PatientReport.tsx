@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { FileText, Download, AlertTriangle, CheckCircle2, Clock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
@@ -25,8 +25,49 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     const conversationText = patientMessages.map(m => m.content.toLowerCase()).join(" ");
     const fullConversation = messages.map(m => m.content.toLowerCase()).join(" ");
     
-    // Extract chief complaint from first few patient messages
-    const chiefComplaint = patientMessages.slice(0, 3).map(m => m.content).join(". ");
+    // Extract patient demographics
+    let patientName = "";
+    let patientAge = "";
+    let patientLocation = "";
+    
+    // Extract name (look for common patterns)
+    const namePatterns = [
+      /(?:name is|i'm|i am|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+      /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)[,.]?\s+\d+/i, // "John Smith, 45"
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = patientMessages[0]?.content.match(pattern);
+      if (match && match[1]) {
+        patientName = match[1];
+        break;
+      }
+    }
+    
+    // Extract age
+    const ageMatch = conversationText.match(/\b(\d{1,3})\s*(?:years?\s*old|yo|y\/o)\b/i) || 
+                     conversationText.match(/(?:age|i'm|i am)\s*(\d{1,3})/i);
+    if (ageMatch) {
+      patientAge = ageMatch[1];
+    }
+    
+    // Extract location
+    const locationPatterns = [
+      /(?:from|in|live in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*[A-Z]{2}/i, // "Boston, MA"
+    ];
+    
+    for (const pattern of locationPatterns) {
+      const match = conversationText.match(pattern);
+      if (match && match[1]) {
+        patientLocation = match[1];
+        break;
+      }
+    }
+    
+    // Extract chief complaint from first few patient messages (skip demographics message)
+    const complaintMessages = patientMessages.slice(patientName ? 1 : 0, 4);
+    const chiefComplaint = complaintMessages.map(m => m.content).join(". ");
     
     // Format with proper capitalization
     const formattedChiefComplaint = chiefComplaint
@@ -177,12 +218,50 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       }
     }
     
-    // Look for medication mentions
+    // Look for medication mentions - be more thorough
+    const medicationPatterns = [
+      /(?:taking|on|prescribed|use|using)\s+([a-z][a-z\s-]+?)(?:\s+for|\s+to|\s+daily|,|\.|$)/gi,
+      /medication[s]?\s*[:]\s*([^.,!?]+)/gi,
+      /(?:pill|tablet|capsule|injection|inhaler)[s]?\s+(?:of|for)?\s*([a-z][a-z\s-]+)/gi,
+    ];
+    
+    const medicationKeywords = [
+      'aspirin', 'ibuprofen', 'tylenol', 'acetaminophen', 'advil', 'aleve',
+      'metformin', 'lisinopril', 'atorvastatin', 'levothyroxine', 'amlodipine',
+      'omeprazole', 'simvastatin', 'losartan', 'gabapentin', 'hydrochlorothiazide',
+      'prednisone', 'insulin', 'warfarin', 'supplement', 'vitamin'
+    ];
+    
     if (conversationText.includes("medication") || conversationText.includes("taking") || 
-        conversationText.includes("prescription")) {
-      const medMatch = conversationText.match(/(taking|on|prescribed)\s+([a-z]+)/gi);
-      if (medMatch) {
-        medications.push(...medMatch.map(m => m.replace(/(taking|on|prescribed)\s+/i, "")));
+        conversationText.includes("prescription") || conversationText.includes("drug")) {
+      
+      // Try pattern matching first
+      for (const pattern of medicationPatterns) {
+        const matches = conversationText.matchAll(pattern);
+        for (const match of matches) {
+          if (match[1] && match[1].trim().length > 2) {
+            const med = match[1].trim()
+              .replace(/^(the|a|an|my|for|to)\s+/i, '')
+              .replace(/\s+(the|a|an|daily|twice|once)$/i, '');
+            if (med.length > 2 && !medications.includes(med)) {
+              medications.push(med);
+            }
+          }
+        }
+      }
+      
+      // Check for common medication keywords
+      for (const keyword of medicationKeywords) {
+        if (conversationText.includes(keyword) && !medications.includes(keyword)) {
+          medications.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+        }
+      }
+      
+      // Check for "no medication" responses
+      if ((conversationText.includes("no medication") || 
+           conversationText.includes("not taking") || 
+           conversationText.includes("don't take")) && medications.length === 0) {
+        medications.push("None reported");
       }
     }
     
@@ -197,6 +276,10 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     }
     
     return {
+      patientName: patientName || "Not provided",
+      patientAge: patientAge || "Not provided",
+      patientLocation: patientLocation || "Not provided",
+      hasDemographics: patientName.length > 0 || patientAge.length > 0 || patientLocation.length > 0,
       chiefComplaint: formattedChiefComplaint || "Not yet identified",
       hasChiefComplaint: chiefComplaint.length > 0,
       duration,
@@ -289,6 +372,18 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       
       addText(`Generated: ${new Date().toLocaleString()}`, 10);
       yPos += 10;
+      
+      // Patient Demographics
+      if (patientInfo.hasDemographics) {
+        addText("Patient Information", 14, true);
+        yPos += 2;
+        addText(`Name: ${patientInfo.patientName}`, 11);
+        yPos += 5;
+        addText(`Age: ${patientInfo.patientAge}`, 11);
+        yPos += 5;
+        addText(`Location: ${patientInfo.patientLocation}`, 11);
+        yPos += 10;
+      }
       
       // Chief Complaint
       addText("Chief Complaint", 14, true);
@@ -420,6 +515,32 @@ const PatientReport = ({ messages }: PatientReportProps) => {
           </div>
         ) : (
           <>
+            {/* Patient Demographics Section */}
+            <ReportSection
+              title="Patient Information"
+              icon={User}
+              color="text-primary"
+              complete={patientInfo.hasDemographics}
+            >
+              {patientInfo.hasDemographics ? (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-medium">Name:</span> {patientInfo.patientName}
+                  </p>
+                  <p>
+                    <span className="font-medium">Age:</span> {patientInfo.patientAge}
+                  </p>
+                  <p>
+                    <span className="font-medium">Location:</span> {patientInfo.patientLocation}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Collecting patient information...
+                </p>
+              )}
+            </ReportSection>
+
             {/* Chief Complaint Section */}
             <ReportSection
               title="Chief Complaint"

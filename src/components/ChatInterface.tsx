@@ -96,7 +96,7 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
     {
       id: "initial",
       role: "agent",
-      content: "Hello! I'm your AI health assistant. I'm here to help gather information before your appointment. How can I help you today?",
+      content: "Hello! I'm your AI health assistant. Before we begin, may I have your name, age, and which city you're located in? This will help us prepare better for your appointment.",
       timestamp: new Date(),
       agentType: "empathy",
     }

@@ -36,11 +36,14 @@ Deno.serve(async (req) => {
 - Whether past medical history, family history, medications, and allergies have been collected
 
 CRITICAL: The interview is NOT complete until we have gathered:
-1. Chief complaint with full details
-2. Past medical history (chronic conditions, surgeries, hospitalizations)
-3. Family medical history (especially relevant to current symptoms)
-4. Current medications (prescription and over-the-counter)
-5. Known allergies
+1. Patient demographics (full name, age, location/city)
+2. Chief complaint with full details
+3. Past medical history (chronic conditions, surgeries, hospitalizations)
+4. Family medical history (especially relevant to current symptoms)
+5. Current medications (prescription and over-the-counter with dosages if possible)
+6. Known allergies
+
+ALWAYS start by asking for: name, age, and location before diving into symptoms.
 
 Return your analysis in JSON format: {"medicalPriority": "high/medium/low", "followUpNeeded": ["question1", "question2"], "redFlags": ["flag1", "flag2"], "missingInfo": ["missing1", "missing2"], "interviewComplete": false}`;
 
@@ -49,8 +52,9 @@ Return your analysis in JSON format: {"medicalPriority": "high/medium/low", "fol
 - The tone matches the patient's emotional needs
 - Medical questions are asked in a caring manner
 - We continue gathering information without making the patient feel interrogated
+- Basic information like name and age is requested warmly at the beginning
 
-IMPORTANT: Balance thoroughness with empathy. We need complete medical history, but ask questions naturally and supportively.
+IMPORTANT: Balance thoroughness with empathy. We need complete medical history including all medications, but ask questions naturally and supportively.
 
 Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed", "toneAdjustment": "description", "empathyLevel": "high/medium/low", "needsMoreSupport": false}`;
 
@@ -124,11 +128,16 @@ Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed
 5. Guide patients to provide complete information needed for the patient report
 
 CRITICAL REQUIREMENTS - The interview is NOT complete until you have gathered ALL of the following:
+✓ Patient demographics: Full name, age, and location/city (ALWAYS ASK FIRST)
 ✓ Chief complaint with full symptom details (onset, duration, severity, triggers, relieving factors)
 ✓ Past medical history (chronic conditions, previous surgeries, hospitalizations)
 ✓ Family medical history (conditions that run in the family, especially relevant to current symptoms)
-✓ Current medications (prescription and over-the-counter, including dosages)
+✓ Current medications (prescription and over-the-counter, including dosages - be thorough about this)
 ✓ Known allergies (medications, foods, environmental)
+
+GREETING: If this is the first message or no name has been collected yet, warmly introduce yourself and ask: "Before we begin, may I have your name, age, and which city you're located in? This helps us prepare better for your appointment."
+
+MEDICATIONS: When asking about medications, be specific: "Are you currently taking any medications, including prescription drugs, over-the-counter medications, supplements, or vitamins?"
 
 Current medical insights: ${JSON.stringify(medicalInsights)}
 Current empathy guidance: ${JSON.stringify(empathyInsights)}
