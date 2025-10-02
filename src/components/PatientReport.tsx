@@ -75,6 +75,48 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       }
     }
     
+    // Extract medical history
+    const medicalHistory: string[] = [];
+    const familyHistory: string[] = [];
+    const medications: string[] = [];
+    const allergies: string[] = [];
+    
+    // Look for medical conditions
+    const conditions = ["diabetes", "hypertension", "high blood pressure", "heart disease", "asthma", "copd", "cancer"];
+    for (const condition of conditions) {
+      if (conversationText.includes(condition)) {
+        medicalHistory.push(condition.charAt(0).toUpperCase() + condition.slice(1));
+      }
+    }
+    
+    // Look for family history mentions
+    if (conversationText.includes("family history") || conversationText.includes("my father") || 
+        conversationText.includes("my mother") || conversationText.includes("runs in")) {
+      const familyMatch = conversationText.match(/family.*?(diabetes|heart|cancer|stroke|hypertension)[^.]*/i);
+      if (familyMatch) {
+        familyHistory.push(familyMatch[0]);
+      }
+    }
+    
+    // Look for medication mentions
+    if (conversationText.includes("medication") || conversationText.includes("taking") || 
+        conversationText.includes("prescription")) {
+      const medMatch = conversationText.match(/(taking|on|prescribed)\s+([a-z]+)/gi);
+      if (medMatch) {
+        medications.push(...medMatch.map(m => m.replace(/(taking|on|prescribed)\s+/i, "")));
+      }
+    }
+    
+    // Look for allergy mentions
+    if (conversationText.includes("allerg")) {
+      const allergyMatch = conversationText.match(/allerg[a-z]*\s+to\s+([^,.]+)/i);
+      if (allergyMatch) {
+        allergies.push(allergyMatch[1]);
+      } else if (conversationText.includes("no allerg")) {
+        allergies.push("None reported");
+      }
+    }
+    
     return {
       chiefComplaint: chiefComplaint || "Not yet identified",
       hasChiefComplaint: chiefComplaint.length > 0,
@@ -82,7 +124,14 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       hasTimeline: duration !== "Not yet recorded",
       triggers: triggers.length > 0 ? triggers.join(", ") : "Not specified",
       characteristics: characteristics.join(", ") || "Being assessed",
-      symptoms: symptoms.length > 0 ? symptoms.join(", ") : "Being gathered"
+      symptoms: symptoms.length > 0 ? symptoms.join(", ") : "Being gathered",
+      medicalHistory: medicalHistory.length > 0 ? medicalHistory : [],
+      familyHistory: familyHistory.length > 0 ? familyHistory : [],
+      medications: medications.length > 0 ? medications : [],
+      allergies: allergies.length > 0 ? allergies : [],
+      hasMedicalHistory: medicalHistory.length > 0 || familyHistory.length > 0 || 
+                         medications.length > 0 || allergies.length > 0 ||
+                         conversationText.includes("no medical") || conversationText.includes("no condition")
     };
   };
 
@@ -322,11 +371,62 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Relevant Medical History"
               icon={FileText}
               color="text-[hsl(var(--medical-teal))]"
-              complete={false}
+              complete={patientInfo.hasMedicalHistory}
             >
-              <p className="text-sm text-muted-foreground italic">
-                Gathering family and personal medical history...
-              </p>
+              {patientInfo.hasMedicalHistory ? (
+                <div className="space-y-3 text-sm">
+                  {patientInfo.medicalHistory.length > 0 && (
+                    <div>
+                      <span className="font-medium">Past Medical History:</span>
+                      <ul className="list-disc list-inside ml-2 mt-1">
+                        {patientInfo.medicalHistory.map((condition, idx) => (
+                          <li key={idx}>{condition}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {patientInfo.familyHistory.length > 0 && (
+                    <div>
+                      <span className="font-medium">Family History:</span>
+                      <ul className="list-disc list-inside ml-2 mt-1">
+                        {patientInfo.familyHistory.map((history, idx) => (
+                          <li key={idx}>{history}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {patientInfo.medications.length > 0 && (
+                    <div>
+                      <span className="font-medium">Current Medications:</span>
+                      <ul className="list-disc list-inside ml-2 mt-1">
+                        {patientInfo.medications.map((med, idx) => (
+                          <li key={idx}>{med}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {patientInfo.allergies.length > 0 && (
+                    <div>
+                      <span className="font-medium">Allergies:</span>
+                      <ul className="list-disc list-inside ml-2 mt-1">
+                        {patientInfo.allergies.map((allergy, idx) => (
+                          <li key={idx}>{allergy}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {patientInfo.medicalHistory.length === 0 && 
+                   patientInfo.familyHistory.length === 0 &&
+                   patientInfo.medications.length === 0 &&
+                   patientInfo.allergies.length === 0 && (
+                    <p>No significant medical history reported</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Gathering family and personal medical history...
+                </p>
+              )}
             </ReportSection>
 
             {/* Suggested Focus Section */}

@@ -31,15 +31,28 @@ Deno.serve(async (req) => {
     // Multi-agent orchestration prompts
     const medicalPrompt = `You are the Medical Relevance Agent. Analyze the conversation and identify:
 - Clinically significant symptoms or red flags
-- Important follow-up questions about medical history
+- Important follow-up questions about medical history that are STILL MISSING
 - Symptoms that need deeper exploration
-Return your analysis in JSON format: {"medicalPriority": "high/medium/low", "followUpNeeded": ["question1", "question2"], "redFlags": ["flag1", "flag2"]}`;
+- Whether past medical history, family history, medications, and allergies have been collected
+
+CRITICAL: The interview is NOT complete until we have gathered:
+1. Chief complaint with full details
+2. Past medical history (chronic conditions, surgeries, hospitalizations)
+3. Family medical history (especially relevant to current symptoms)
+4. Current medications (prescription and over-the-counter)
+5. Known allergies
+
+Return your analysis in JSON format: {"medicalPriority": "high/medium/low", "followUpNeeded": ["question1", "question2"], "redFlags": ["flag1", "flag2"], "missingInfo": ["missing1", "missing2"], "interviewComplete": false}`;
 
     const empathyPrompt = `You are the Patient Empathy Agent. Analyze the patient's emotional state and ensure:
 - The response is warm, supportive, and compassionate
 - The tone matches the patient's emotional needs
 - Medical questions are asked in a caring manner
-Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed", "toneAdjustment": "description", "empathyLevel": "high/medium/low"}`;
+- We continue gathering information without making the patient feel interrogated
+
+IMPORTANT: Balance thoroughness with empathy. We need complete medical history, but ask questions naturally and supportively.
+
+Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed", "toneAdjustment": "description", "empathyLevel": "high/medium/low", "needsMoreSupport": false}`;
 
     // Step 1: Medical Relevance Agent analyzes
     const medicalAnalysis = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -63,7 +76,13 @@ Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed
     try {
       medicalInsights = JSON.parse(medicalData.choices[0].message.content);
     } catch {
-      medicalInsights = { medicalPriority: "medium", followUpNeeded: [], redFlags: [] };
+      medicalInsights = { 
+        medicalPriority: "medium", 
+        followUpNeeded: [], 
+        redFlags: [],
+        missingInfo: ["medical history", "family history", "medications", "allergies"],
+        interviewComplete: false
+      };
     }
 
     // Step 2: Empathy Agent analyzes
@@ -88,7 +107,12 @@ Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed
     try {
       empathyInsights = JSON.parse(empathyData.choices[0].message.content);
     } catch {
-      empathyInsights = { emotionalState: "calm", toneAdjustment: "supportive", empathyLevel: "high" };
+      empathyInsights = { 
+        emotionalState: "calm", 
+        toneAdjustment: "supportive", 
+        empathyLevel: "high",
+        needsMoreSupport: false
+      };
     }
 
     // Step 3: Generate final response combining insights
@@ -99,18 +123,21 @@ Return your analysis in JSON format: {"emotionalState": "anxious/calm/distressed
 4. Maintain a supportive, professional tone similar to an experienced triage nurse
 5. Guide patients to provide complete information needed for the patient report
 
-IMPORTANT: Help patients complete their medical history by asking about:
-- Chief complaint and when symptoms started
-- Duration, frequency, and severity of symptoms
-- What makes symptoms better or worse
-- Any associated symptoms
-- Relevant medical and family history
-- Current medications and allergies
+CRITICAL REQUIREMENTS - The interview is NOT complete until you have gathered ALL of the following:
+✓ Chief complaint with full symptom details (onset, duration, severity, triggers, relieving factors)
+✓ Past medical history (chronic conditions, previous surgeries, hospitalizations)
+✓ Family medical history (conditions that run in the family, especially relevant to current symptoms)
+✓ Current medications (prescription and over-the-counter, including dosages)
+✓ Known allergies (medications, foods, environmental)
 
 Current medical insights: ${JSON.stringify(medicalInsights)}
 Current empathy guidance: ${JSON.stringify(empathyInsights)}
 
-Based on these insights, ask the next appropriate question to help complete the patient report. Be conversational, warm, and thorough.`;
+MISSING INFORMATION: ${medicalInsights.missingInfo?.join(", ") || "Continue gathering details"}
+
+Based on the missing information above, ask the next appropriate question to complete the patient report. DO NOT end the conversation or say goodbye until ALL information is gathered. Be conversational, warm, and thorough.
+
+If the patient seems to have answered everything, specifically ask: "Before we finish, let me make sure I have everything - do you have any chronic medical conditions? Any family history of serious illnesses? Are you currently taking any medications? And do you have any known allergies?"`;
 
     const finalResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
