@@ -30,38 +30,50 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     let patientAge = "";
     let patientLocation = "";
     
-    // Extract name (look for common patterns)
-    const namePatterns = [
-      /(?:name is|i'm|i am|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-      /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)[,.]?\s+\d+/i, // "John Smith, 45"
-    ];
+    // Look for comma-separated format: "Name, Age, Location"
+    const firstPatientMsg = patientMessages[0]?.content || "";
+    const commaSeparated = firstPatientMsg.match(/^([A-Za-z\s]+),\s*(\d{1,3}),\s*([A-Za-z\s]+)/);
     
-    for (const pattern of namePatterns) {
-      const match = patientMessages[0]?.content.match(pattern);
-      if (match && match[1]) {
-        patientName = match[1];
-        break;
+    if (commaSeparated) {
+      patientName = commaSeparated[1].trim();
+      patientAge = commaSeparated[2].trim();
+      patientLocation = commaSeparated[3].trim();
+    } else {
+      // Extract name (look for common patterns)
+      const namePatterns = [
+        /(?:name is|i'm|i am|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+        /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)[,.]?\s+\d+/i, // "John Smith, 45"
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = firstPatientMsg.match(pattern);
+        if (match && match[1]) {
+          patientName = match[1];
+          break;
+        }
       }
-    }
-    
-    // Extract age
-    const ageMatch = conversationText.match(/\b(\d{1,3})\s*(?:years?\s*old|yo|y\/o)\b/i) || 
-                     conversationText.match(/(?:age|i'm|i am)\s*(\d{1,3})/i);
-    if (ageMatch) {
-      patientAge = ageMatch[1];
-    }
-    
-    // Extract location
-    const locationPatterns = [
-      /(?:from|in|live in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*[A-Z]{2}/i, // "Boston, MA"
-    ];
-    
-    for (const pattern of locationPatterns) {
-      const match = conversationText.match(pattern);
-      if (match && match[1]) {
-        patientLocation = match[1];
-        break;
+      
+      // Extract age
+      const ageMatch = conversationText.match(/\b(\d{1,3})\s*(?:years?\s*old|yo|y\/o)\b/i) || 
+                       conversationText.match(/(?:age|i'm|i am)\s*(\d{1,3})/i) ||
+                       conversationText.match(/,\s*(\d{1,3})\s*,/); // Middle number in comma format
+      if (ageMatch) {
+        patientAge = ageMatch[1];
+      }
+      
+      // Extract location
+      const locationPatterns = [
+        /(?:from|in|live in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+        /,\s*([A-Z]{2,})\s*$/i, // Comma followed by caps at end (like ", QC")
+        /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*[A-Z]{2}/i, // "Boston, MA"
+      ];
+      
+      for (const pattern of locationPatterns) {
+        const match = firstPatientMsg.match(pattern);
+        if (match && match[1]) {
+          patientLocation = match[1];
+          break;
+        }
       }
     }
     
