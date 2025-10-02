@@ -23,6 +23,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
   const extractPatientInfo = () => {
     const patientMessages = messages.filter(m => m.role === "patient");
     const conversationText = patientMessages.map(m => m.content.toLowerCase()).join(" ");
+    const fullConversation = messages.map(m => m.content.toLowerCase()).join(" ");
     
     // Extract chief complaint from first few patient messages
     const chiefComplaint = patientMessages.slice(0, 3).map(m => m.content).join(". ");
@@ -101,18 +102,40 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     // Extract associated symptoms
     const symptoms: string[] = [];
     const symptomKeywords = {
+      "chest": "Chest pain",
       "breath": "Shortness of breath",
       "dizzy": "Dizziness",
       "nausea": "Nausea",
       "sweat": "Sweating",
       "pain": "Pain",
       "tight": "Tightness",
-      "pressure": "Pressure"
+      "pressure": "Pressure",
+      "sharp": "Sharp pain",
+      "radiating": "Radiating pain"
     };
     
     for (const [keyword, symptom] of Object.entries(symptomKeywords)) {
       if (conversationText.includes(keyword)) {
         symptoms.push(symptom);
+      }
+    }
+    
+    // Detect red flags
+    const hasChestSymptoms = conversationText.includes("chest") || 
+                            conversationText.includes("heart") ||
+                            chiefComplaint.toLowerCase().includes("chest");
+    const hasBreathingIssues = conversationText.includes("breath") || 
+                               conversationText.includes("breathing") ||
+                               conversationText.includes("air");
+    const hasSharpPain = conversationText.includes("sharp");
+    const hasPressure = conversationText.includes("pressure") || conversationText.includes("tight");
+    
+    const redFlags: string[] = [];
+    if (hasChestSymptoms) {
+      if (hasBreathingIssues || hasSharpPain || hasPressure) {
+        redFlags.push("Chest pain with breathing difficulty or sharp/pressure sensation requires immediate cardiac evaluation");
+      } else {
+        redFlags.push("Chest symptoms require prompt medical evaluation");
       }
     }
     
@@ -172,7 +195,9 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       allergies: allergies.length > 0 ? allergies : [],
       hasMedicalHistory: medicalHistory.length > 0 || familyHistory.length > 0 || 
                          medications.length > 0 || allergies.length > 0 ||
-                         conversationText.includes("no medical") || conversationText.includes("no condition")
+                         conversationText.includes("no medical") || conversationText.includes("no condition"),
+      redFlags,
+      hasRedFlags: redFlags.length > 0
     };
   };
 
@@ -202,10 +227,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
           type: m.agentType
         }))
       },
-      redFlags: patientInfo.symptoms.toLowerCase().includes("chest") || 
-                patientInfo.chiefComplaint.toLowerCase().includes("chest")
-        ? ["Chest symptoms require immediate evaluation"]
-        : [],
+      redFlags: patientInfo.redFlags,
       recommendations: patientInfo.hasTimeline
         ? [
             "Complete physical examination",
@@ -380,22 +402,24 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               title="Red Flags & Urgent Concerns"
               icon={AlertTriangle}
               color="text-destructive"
-              badge={patientInfo.hasTimeline && generateReportData().redFlags.length > 0 ? <Badge variant="destructive">High Priority</Badge> : undefined}
-              complete={patientInfo.hasTimeline}
+              badge={patientInfo.hasRedFlags ? <Badge variant="destructive">High Priority</Badge> : undefined}
+              complete={patientInfo.hasRedFlags}
             >
-              {patientInfo.hasTimeline && generateReportData().redFlags.length > 0 ? (
+              {patientInfo.hasRedFlags ? (
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                    <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-medium text-destructive mb-1">
-                        Urgent Medical Attention Required
-                      </p>
-                      <p className="text-foreground/80">
-                        {generateReportData().redFlags.join(". ")}
-                      </p>
+                  {patientInfo.redFlags.map((flag, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                      <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-destructive mb-1">
+                          Urgent Medical Attention Required
+                        </p>
+                        <p className="text-foreground/80">
+                          {flag}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                   <p className="text-sm">
                     <span className="font-medium">Recommendation:</span> Immediate medical evaluation and appropriate diagnostic workup
                   </p>
