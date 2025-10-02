@@ -20,19 +20,19 @@ const agentInfo = {
   medical: {
     name: "Medical Relevance Agent",
     icon: Brain,
-    color: "text-primary bg-primary/10",
+    color: "bg-blue-50 text-blue-600",
     description: "Identifying clinical significance",
   },
   empathy: {
     name: "Patient Empathy Agent",
     icon: Heart,
-    color: "text-accent bg-accent/10",
+    color: "bg-green-50 text-green-600",
     description: "Ensuring warm, supportive tone",
   },
   report: {
     name: "Report Clarity Agent",
     icon: FileText,
-    color: "text-[hsl(var(--medical-teal))] bg-[hsl(var(--medical-teal))]/10",
+    color: "bg-purple-50 text-purple-600",
     description: "Structuring information",
   },
 };
@@ -96,7 +96,7 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
     {
       id: "initial",
       role: "agent",
-      content: "Hello! I'm your AI health assistant. Before we begin, may I have your name, age, and which city you're located in? This will help us prepare better for your appointment.",
+      content: "Hi! I'm Ally, your AI health assistant. Before we begin, may I have your name, age, and which city you're located in? This will help us prepare better for your appointment.",
       timestamp: new Date(),
       agentType: "empathy",
     }
@@ -178,24 +178,24 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
   };
 
   return (
-    <Card className="flex flex-col h-[600px] shadow-lg">
+    <Card className="flex flex-col h-[600px] rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b bg-gradient-to-r from-primary/5 to-[hsl(var(--medical-teal))]/5">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-          <Bot className="w-6 h-6 text-primary" />
+      <div className="flex items-center gap-3 p-6 border-b border-gray-100">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
+          <Bot className="w-6 h-6 text-white" />
         </div>
-        <div>
-          <h3 className="font-semibold">AI Health Assistant</h3>
-          <p className="text-sm text-muted-foreground">Multi-Agent System Active</p>
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900">AI Assistant</h3>
+          <p className="text-sm text-gray-500">Real-time conversation</p>
         </div>
-        <Badge variant="secondary" className="ml-auto">
+        <Badge variant="secondary" className="bg-green-50 text-green-700 border-0 px-3 py-1 rounded-full text-xs font-medium">
           AI Active
         </Badge>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 p-6" ref={scrollRef}>
+        <div className="space-y-6">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -205,47 +205,47 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
                   message.role === "patient"
-                    ? "bg-secondary"
+                    ? "bg-gray-100"
                     : message.agentType
                     ? agentInfo[message.agentType].color
                     : "bg-primary/10"
                 }`}
               >
                 {message.role === "patient" ? (
-                  <User className="w-4 h-4" />
+                  <User className="w-5 h-5 text-gray-700" />
                 ) : message.agentType ? (
                   (() => {
                     const Icon = agentInfo[message.agentType].icon;
-                    return <Icon className="w-4 h-4" />;
+                    return <Icon className="w-5 h-5" />;
                   })()
                 ) : (
-                  <Bot className="w-4 h-4" />
+                  <Bot className="w-5 h-5 text-primary" />
                 )}
               </div>
 
               {/* Message bubble */}
               <div
-                className={`flex flex-col max-w-[80%] ${
+                className={`flex flex-col max-w-[75%] ${
                   message.role === "patient" ? "items-end" : "items-start"
                 }`}
               >
                 {message.role === "agent" && message.agentType && (
-                  <span className="text-xs text-muted-foreground mb-1">
+                  <span className="text-xs text-gray-500 mb-1.5 font-medium">
                     {agentInfo[message.agentType].name}
                   </span>
                 )}
                 <div
-                  className={`rounded-2xl px-4 py-3 ${
+                  className={`rounded-3xl px-5 py-3.5 shadow-sm ${
                     message.role === "patient"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                      ? "bg-primary text-white"
+                      : "bg-gray-50 text-gray-900"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-[15px] leading-relaxed">{message.content}</p>
                 </div>
-                <span className="text-xs text-muted-foreground mt-1">
+                <span className="text-xs text-gray-400 mt-1.5">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -258,12 +258,12 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
           {/* Typing indicator */}
           {isTyping && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Bot className="w-5 h-5 text-primary" />
               </div>
-              <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-1">
+              <div className="bg-gray-50 rounded-3xl px-5 py-3.5 flex items-center gap-2 shadow-sm">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground ml-2">Analyzing response...</span>
+                <span className="text-sm text-gray-600">Thinking...</span>
               </div>
             </div>
           )}
@@ -271,17 +271,21 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t">
-        <div className="flex gap-2">
+      <div className="p-6 border-t border-gray-100">
+        <div className="flex gap-3">
           <Input
-            placeholder="Type your response..."
+            placeholder="Type your message..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            className="flex-1"
+            className="flex-1 h-12 rounded-2xl border-gray-200 bg-gray-50 px-5 text-[15px] focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
           />
-          <Button onClick={handleSend} size="icon" variant="hero">
-            <Send className="w-4 h-4" />
+          <Button 
+            onClick={handleSend} 
+            size="icon" 
+            className="h-12 w-12 rounded-2xl bg-primary hover:bg-primary/90 shadow-sm"
+          >
+            <Send className="w-5 h-5" />
           </Button>
         </div>
       </div>

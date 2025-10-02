@@ -496,16 +496,16 @@ const PatientReport = ({ messages }: PatientReportProps) => {
   };
 
   return (
-    <Card className="h-[600px] flex flex-col shadow-lg">
+    <Card className="h-[600px] flex flex-col rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[hsl(var(--medical-teal))]/5 to-primary/5">
+      <div className="flex items-center justify-between p-6 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[hsl(var(--medical-teal))]/10 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-2xl bg-[hsl(var(--medical-teal))]/10 flex items-center justify-center shadow-sm">
             <FileText className="w-6 h-6 text-[hsl(var(--medical-teal))]" />
           </div>
           <div>
-            <h3 className="font-semibold">Patient Report</h3>
-            <p className="text-sm text-muted-foreground">Auto-Generated Summary</p>
+            <h3 className="font-semibold text-gray-900">Patient Report</h3>
+            <p className="text-sm text-gray-500">Auto-generated summary</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -514,6 +514,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
             size="sm"
             onClick={handleExportPDF}
             disabled={messages.length === 0}
+            className="rounded-xl border-gray-200 hover:bg-gray-50 h-10 px-4"
           >
             <Download className="w-4 h-4 mr-2" />
             Download PDF
@@ -525,9 +526,9 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <FileText className="w-16 h-16 text-muted-foreground/20 mb-4" />
-            <p className="text-muted-foreground">
-              The patient report will appear here as the conversation progresses.
+            <FileText className="w-16 h-16 text-gray-200 mb-4" />
+            <p className="text-gray-500 text-[15px]">
+              Your medical report will appear here as the conversation progresses
             </p>
           </div>
         ) : (
@@ -749,18 +750,18 @@ const ReportSection = ({
   children,
 }: ReportSectionProps) => {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-5 rounded-2xl bg-gray-50/50 border border-gray-100">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Icon className={`w-5 h-5 ${color}`} />
-          <h4 className="font-semibold text-sm">{title}</h4>
+          <h4 className="font-semibold text-sm text-gray-900">{title}</h4>
           {complete && (
-            <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success-green))]" />
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
           )}
         </div>
         {badge}
       </div>
-      <div className="pl-7">{children}</div>
+      <div className="pl-7 text-gray-700">{children}</div>
     </div>
   );
 };
