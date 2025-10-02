@@ -1,9 +1,6 @@
 import { useState } from "react";
-import Hero from "@/components/Hero";
 import ChatInterface from "@/components/ChatInterface";
 import PatientReport from "@/components/PatientReport";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 interface Message {
   id: string;
@@ -14,21 +11,7 @@ interface Message {
 }
 
 const Index = () => {
-  const [showDemo, setShowDemo] = useState(false);
   const [reportMessages, setReportMessages] = useState<Message[]>([]);
-
-  const handleStartDemo = () => {
-    setShowDemo(true);
-    setReportMessages([]);
-  };
-
-  const handleBackToHome = () => {
-    setShowDemo(false);
-  };
-
-  if (!showDemo) {
-    return <Hero onStartDemo={handleStartDemo} />;
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,19 +19,10 @@ const Index = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackToHome}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
             <div>
-              <h2 className="font-semibold">Demo Conversation</h2>
+              <h2 className="font-semibold">AI Pre-Visit Conversation</h2>
               <p className="text-sm text-muted-foreground">
-                Watch the AI agents collaborate in real-time
+                Multi-agent system gathering patient information
               </p>
             </div>
           </div>
