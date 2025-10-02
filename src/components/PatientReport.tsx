@@ -92,10 +92,12 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       // Capitalize "i'm" to "I'm"
       .replace(/\bi'm\b/g, "I'm");
     
-    // Extract symptom duration
+    // Extract symptom duration (avoid matching age mentions)
     let duration = "Not yet recorded";
     const durationPatterns = [
-      /(\d+)\s*(week|month|day|year)s?/i,
+      /(?:for|over|past|last|about|around|since)\s+(\d+)\s*(week|month|day|year)s?/i,
+      /(\d+)\s*(week|month|day|year)s?\s+(?:of|with|ago)/i,
+      /(?:started|began)\s+(\d+)\s*(week|month|day|year)s?\s+ago/i,
       /(yesterday|today|last week|last month)/i,
       /(recently|lately)/i
     ];
