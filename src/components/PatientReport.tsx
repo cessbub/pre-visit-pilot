@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, AlertTriangle, CheckCircle2, Clock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 
 interface Message {
@@ -19,8 +21,55 @@ interface PatientReportProps {
 
 const PatientReport = ({ messages }: PatientReportProps) => {
   const { toast } = useToast();
-  
-  const extractPatientInfo = () => {
+  const [patientInfo, setPatientInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const extractInfo = async () => {
+      if (messages.length === 0) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('extract-patient-info', {
+          body: { messages }
+        });
+
+        if (error) throw error;
+        
+        setPatientInfo({
+          patientName: data.patientName || "Not provided",
+          patientAge: data.patientAge || "Not provided",
+          patientLocation: data.patientLocation || "Not provided",
+          hasDemographics: data.patientName !== "Not provided" || data.patientAge !== "Not provided" || data.patientLocation !== "Not provided",
+          chiefComplaint: data.chiefComplaint || "Not yet identified",
+          hasChiefComplaint: data.chiefComplaint !== "Not yet identified",
+          duration: data.duration || "Not yet recorded",
+          hasTimeline: data.duration !== "Not yet recorded",
+          triggers: data.triggers.length > 0 ? data.triggers.join(", ") : "Not specified",
+          characteristics: data.characteristics.length > 0 ? data.characteristics.join("; ") : "Being assessed",
+          symptoms: data.symptoms.length > 0 ? data.symptoms.join(", ") : "Being gathered",
+          medicalHistory: data.medicalHistory || [],
+          familyHistory: data.familyHistory || [],
+          medications: data.medications || [],
+          allergies: data.allergies || [],
+          hasMedicalHistory: data.medicalHistory.length > 0 || data.familyHistory.length > 0 || 
+                             data.medications.length > 0 || data.allergies.length > 0,
+          redFlags: data.redFlags || [],
+          hasRedFlags: data.redFlags.length > 0
+        });
+      } catch (error) {
+        console.error('Error extracting patient info:', error);
+        // Fallback to basic extraction if AI fails
+        setPatientInfo(extractPatientInfoFallback());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    extractInfo();
+  }, [messages]);
+
+  const extractPatientInfoFallback = () => {
     const patientMessages = messages.filter(m => m.role === "patient");
     const conversationText = patientMessages.map(m => m.content.toLowerCase()).join(" ");
     const fullConversation = messages.map(m => m.content.toLowerCase()).join(" ");
@@ -319,7 +368,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
     };
   };
 
-  const patientInfo = extractPatientInfo();
+  // patientInfo is now managed by useState and populated via useEffect
 
   const generateReportData = () => {
     const patientMessages = messages.filter(m => m.role === "patient");
@@ -497,6 +546,19 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       });
     }
   };
+
+  if (isLoading || !patientInfo) {
+    return (
+      <Card className="h-[600px] flex flex-col rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Analyzing conversation...</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-[600px] flex flex-col rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
