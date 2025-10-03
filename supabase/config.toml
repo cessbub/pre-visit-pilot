@@ -2,3 +2,6 @@ project_id = "pargdgwfscecfioeekdl"
 
 [functions.multi-agent-chat]
 verify_jwt = false
+
+[functions.extract-patient-info]
+verify_jwt = false
