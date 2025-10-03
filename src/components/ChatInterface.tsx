@@ -153,11 +153,6 @@ const ChatInterface = ({ onUpdateReport }: { onUpdateReport: (messages: Message[
       });
     } catch (error) {
       console.error("Error calling AI:", error);
-      toast({
-        title: "AI Error",
-        description: "Make sure Lovable Cloud is enabled and your OpenAI API key is configured.",
-        variant: "destructive",
-      });
       
       // Fallback response
       const agentMessage: Message = {
