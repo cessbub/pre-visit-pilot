@@ -21,14 +21,31 @@ interface PatientReportProps {
 
 const PatientReport = ({ messages }: PatientReportProps) => {
   const { toast } = useToast();
-  const [patientInfo, setPatientInfo] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [patientInfo, setPatientInfo] = useState<any>({
+    patientName: "Not provided",
+    patientAge: "Not provided",
+    patientLocation: "Not provided",
+    hasDemographics: false,
+    chiefComplaint: "Not yet identified",
+    hasChiefComplaint: false,
+    duration: "Not yet recorded",
+    hasTimeline: false,
+    triggers: "Not specified",
+    characteristics: "Being assessed",
+    symptoms: "Being gathered",
+    medicalHistory: [],
+    familyHistory: [],
+    medications: [],
+    allergies: [],
+    hasMedicalHistory: false,
+    redFlags: [],
+    hasRedFlags: false
+  });
 
   useEffect(() => {
     const extractInfo = async () => {
       if (messages.length === 0) return;
       
-      setIsLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('extract-patient-info', {
           body: { messages }
@@ -61,8 +78,6 @@ const PatientReport = ({ messages }: PatientReportProps) => {
         console.error('Error extracting patient info:', error);
         // Fallback to basic extraction if AI fails
         setPatientInfo(extractPatientInfoFallback());
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -546,19 +561,6 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       });
     }
   };
-
-  if (isLoading || !patientInfo) {
-    return (
-      <Card className="h-[600px] flex flex-col rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Analyzing conversation...</p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <Card className="h-[600px] flex flex-col rounded-3xl border-0 shadow-xl bg-white/90 backdrop-blur-xl">
