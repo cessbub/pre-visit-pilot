@@ -55,7 +55,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
       
       // Extract age
       const ageMatch = conversationText.match(/\b(\d{1,3})\s*(?:years?\s*old|yo|y\/o)\b/i) || 
-                       conversationText.match(/(?:age|i'm|i am)\s*(\d{1,3})/i) ||
+                       conversationText.match(/(?:age|aged|i'm|i am)\s*(\d{1,3})/i) ||
                        conversationText.match(/,\s*(\d{1,3})\s*,/); // Middle number in comma format
       if (ageMatch) {
         patientAge = ageMatch[1];
@@ -66,6 +66,7 @@ const PatientReport = ({ messages }: PatientReportProps) => {
         /(?:from|in|live in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
         /,\s*([A-Z]{2,})\s*$/i, // Comma followed by caps at end (like ", QC")
         /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,\s*[A-Z]{2}/i, // "Boston, MA"
+        /\.\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*\.?\s*$/i, // Period followed by proper noun at end (like ". Quezon City.")
       ];
       
       for (const pattern of locationPatterns) {
