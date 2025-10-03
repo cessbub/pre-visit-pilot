@@ -671,15 +671,15 @@ const PatientReport = ({ messages }: PatientReportProps) => {
               )}
             </ReportSection>
 
-            {/* Red Flags Section */}
-            <ReportSection
-              title="Red Flags & Urgent Concerns"
-              icon={AlertTriangle}
-              color="text-destructive"
-              badge={patientInfo.hasRedFlags ? <Badge variant="destructive">High Priority</Badge> : undefined}
-              complete={patientInfo.hasRedFlags}
-            >
-              {patientInfo.hasRedFlags ? (
+            {/* Red Flags Section - Only show if there are actual red flags */}
+            {patientInfo.hasRedFlags && patientInfo.redFlags.length > 0 && (
+              <ReportSection
+                title="Red Flags & Urgent Concerns"
+                icon={AlertTriangle}
+                color="text-destructive"
+                badge={<Badge variant="destructive">High Priority</Badge>}
+                complete={true}
+              >
                 <div className="space-y-2">
                   {patientInfo.redFlags.map((flag, idx) => (
                     <div key={idx} className="flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
@@ -698,12 +698,8 @@ const PatientReport = ({ messages }: PatientReportProps) => {
                     <span className="font-medium">Recommendation:</span> Immediate medical evaluation and appropriate diagnostic workup
                   </p>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  Analyzing for urgent concerns...
-                </p>
-              )}
-            </ReportSection>
+              </ReportSection>
+            )}
 
             {/* Medical History Section */}
             <ReportSection
